@@ -1,0 +1,103 @@
+# Personal & Media
+chrome_profile*
+*m4a
+*mp4
+__pycache__
+.venv
+./.venv
+*json
+
+# Auth & WhatsApp Web JS
+auth
+*.auth
+auth/*
+.wwebjs_auth
+.wwebjs_cache
+.wwebjs
+
+# Docker
+docker-compose.override.yml
+*docker-compose.override.yml
+secrets/
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# Diagnostic reports (https://nodejs.org/api/report.html)
+report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage / Tools
+lib-cov
+coverage
+*.lcov
+.nyc_output
+.grunt
+bower_components
+.lock-wscript
+build/Release
+
+# Dependency directories
+node_modules/
+jspm_packages/
+web_modules/
+
+# Caches
+*.tsbuildinfo
+.npm
+.eslintcache
+.stylelintcache
+.rpt2_cache/
+.rts2_cache_cjs/
+.rts2_cache_es/
+.rts2_cache_umd/
+.node_repl_history
+.cache
+.parcel-cache
+.temp
+.html
+.idea
+
+# Build & Frameworks (Next.js, Nuxt, Gatsby, etc.)
+.next
+out
+.nuxt
+dist
+.vuepress/dist
+**/.vitepress/dist
+**/.vitepress/cache
+.docusaurus
+.serverless/
+.fusebox/
+.dynamodb/
+
+# Environment files
+.env*
+.env.development.local
+.env.test.local
+.env.production.local
+.env.local
+
+# Package managers
+*.tgz
+.yarn-integrity
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+.pnp.*
+
+# Misc
+.tern-port
+.vscode-test

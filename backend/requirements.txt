@@ -1,0 +1,6 @@
+loguru
+emoji
+pydantic
+pydantic-settings
+fastapi
+uvicorn
