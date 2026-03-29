@@ -118,14 +118,32 @@
             border-radius: 0 0 0.75rem 0.75rem;
             transition: width linear;
         }
+
+        /* Interactive Background Canvas */
+        #entropy-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            pointer-events: none;
+        }
+        main {
+            position: relative;
+            z-index: 1;
+        }
     </style>
 </head>
-<body class="bg-neutral-950 text-neutral-300 min-h-screen flex flex-col antialiased selection:bg-neutral-800 selection:text-white bg-[radial-gradient(#171717_1px,transparent_1px)] [background-size:1rem_1rem]">
+<body class="bg-neutral-950 text-neutral-300 min-h-screen flex flex-col antialiased selection:bg-neutral-800 selection:text-white">
+    
+    <!-- Interactive Entropy Background -->
+    <canvas id="entropy-canvas"></canvas>
     
     <main class="flex-1 w-full max-w-2xl mx-auto px-4 py-16 flex flex-col gap-10">
         
         <!-- Header -->
-        <header class="flex flex-col items-center text-center gap-3">
+        <header class="flex flex-col items-center text-center gap-3 relative">
             <div class="h-10 w-10 bg-white rounded-lg flex items-center justify-center text-neutral-950 text-sm font-semibold tracking-tighter shadow-[0_0_15px_rgba(255,255,255,0.1)]">
                 YH
             </div>
@@ -133,6 +151,9 @@
                 <h1 class="text-2xl font-medium tracking-tight text-white">Entropy Generator</h1>
                 <p class="text-sm text-neutral-500">Enterprise-grade cryptographic key synthesis.</p>
             </div>
+            <a href="https://github.com/yegear1/entropy-generator" target="_blank" rel="noopener noreferrer" class="absolute top-0 right-0 p-2 rounded-lg text-neutral-600 hover:text-white hover:bg-neutral-800/50 transition-all" aria-label="View source code on GitHub">
+                <iconify-icon icon="mdi:github" class="text-xl"></iconify-icon>
+            </a>
         </header>
 
         <!-- Main Interface -->
@@ -158,6 +179,45 @@
                 </button>
             </div>
 
+            <!-- Entropy Meter -->
+            <div id="entropy-container" class="opacity-0 transition-opacity duration-500">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center gap-2">
+                        <iconify-icon icon="solar:shield-check-linear" class="text-neutral-500 text-sm"></iconify-icon>
+                        <span class="text-xs font-medium text-neutral-500 uppercase tracking-wider">Entropy Strength</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span id="entropy-text" class="text-xs font-mono text-neutral-500">— bits</span>
+                        <button id="btn-entropy-info" class="text-neutral-600 hover:text-neutral-300 transition-colors" aria-label="How is entropy calculated?">
+                            <iconify-icon icon="solar:info-circle-linear" class="text-sm"></iconify-icon>
+                        </button>
+                    </div>
+                </div>
+                <div class="w-full h-1.5 bg-neutral-800 rounded-full overflow-hidden">
+                    <div id="entropy-bar" class="h-full bg-neutral-600 rounded-full transition-all duration-500 ease-out" style="width: 0%"></div>
+                </div>
+                <!-- Entropy Formula Explanation (collapsible) -->
+                <div id="entropy-info" class="hidden mt-3 p-4 bg-neutral-900/80 border border-neutral-800 rounded-lg text-xs text-neutral-400 space-y-2.5 animate-[fadeIn_0.2s_ease-out]">
+                    <div class="flex items-center gap-2 text-neutral-300 font-medium text-sm">
+                        <iconify-icon icon="solar:calculator-linear" class="text-base"></iconify-icon>
+                        How entropy is calculated
+                    </div>
+                    <div class="space-y-1.5 font-mono text-[0.7rem] leading-relaxed">
+                        <p><span class="text-white">Password:</span> E = L × log₂(R)</p>
+                        <p class="text-neutral-500">L = length, R = pool size (unique characters)</p>
+                        <p class="text-neutral-500">R = uppercase(26) + lowercase(26) + digits(10) + symbols(32) + emojis(~3000)</p>
+                        <p class="mt-2"><span class="text-white">Passphrase:</span> E = W × log₂(7776)</p>
+                        <p class="text-neutral-500">W = word count, 7776 = EFF Diceware wordlist size</p>
+                    </div>
+                    <div class="border-t border-neutral-800 pt-2 space-y-1">
+                        <p class="text-neutral-500">< 50 bits → <span class="text-red-400">Weak</span> (brute-forceable)</p>
+                        <p class="text-neutral-500">50–79 bits → <span class="text-yellow-400">Fair</span> (limited protection)</p>
+                        <p class="text-neutral-500">80–127 bits → <span class="text-emerald-400">Strong</span> (secure for most uses)</p>
+                        <p class="text-neutral-500">≥ 128 bits → <span class="text-cyan-400">Military</span> (quantum-resistant tier)</p>
+                    </div>
+                </div>
+            </div>
+
             <!-- Configuration Card -->
             <div class="bg-neutral-900/50 backdrop-blur-md rounded-xl border border-neutral-800 overflow-hidden">
                 
@@ -171,13 +231,13 @@
                     <!-- Password View -->
                     <div id="view-password" class="flex flex-col gap-8 animate-[fadeIn_0.2s_ease-out]">
                         
-                        <!-- Length Slider -->
+                        <!-- Length Slider (logarithmic) -->
                         <div class="flex flex-col gap-2">
                             <div class="flex justify-between items-center text-sm">
                                 <span class="font-medium text-neutral-200">Length</span>
                                 <span id="val-length" class="text-neutral-400 font-mono text-xs bg-neutral-950 border border-neutral-800 px-2 py-1 rounded-md min-w-[2.5rem] text-center">24</span>
                             </div>
-                            <input type="range" id="inp-length" min="9" max="128" value="24" class="w-full">
+                            <input type="range" id="inp-length" min="0" max="1000" value="500" class="w-full">
                             <div id="ticks-length" class="slider-ticks"></div>
                         </div>
 
@@ -313,12 +373,33 @@
             const inpWords = document.getElementById('inp-words');
             const valWords = document.getElementById('val-words');
 
+            // --- Logarithmic Slider Mapping ---
+            // Maps a linear 0-1000 slider to a logarithmic 9-128 range
+            // This gives more visual space to the 9-32 range (where most users operate)
+            const LOG_MIN = 9;
+            const LOG_MAX = 128;
+            const SLIDER_MAX = 1000;
+
+            function sliderToLength(sliderVal) {
+                // Logarithmic: value = min * (max/min)^(t)
+                const t = sliderVal / SLIDER_MAX;
+                return Math.round(LOG_MIN * Math.pow(LOG_MAX / LOG_MIN, t));
+            }
+
+            function lengthToSlider(length) {
+                // Inverse: t = log(value/min) / log(max/min)
+                const t = Math.log(length / LOG_MIN) / Math.log(LOG_MAX / LOG_MIN);
+                return Math.round(t * SLIDER_MAX);
+            }
+
+            // Set initial slider position for value 24
+            inpLength.value = lengthToSlider(24);
+
             // --- Slider Tick Marks ---
-            function createTicks(container, min, max, marks) {
+            function createTicks(container, marks, mapFn) {
                 container.innerHTML = '';
                 marks.forEach(val => {
-                    if (val < min || val > max) return;
-                    const pct = ((val - min) / (max - min)) * 100;
+                    const pct = mapFn ? mapFn(val) : 0;
                     const tick = document.createElement('div');
                     tick.className = 'slider-tick';
                     tick.style.left = `${pct}%`;
@@ -330,23 +411,32 @@
                 });
             }
 
-            // Password slider ticks: 8, 16, 32, 64, 128
+            // Password slider ticks (logarithmic positions)
             createTicks(
                 document.getElementById('ticks-length'),
-                9, 128,
-                [16, 32, 64, 128]
+                [12, 16, 24, 32, 64, 128],
+                (val) => (lengthToSlider(val) / SLIDER_MAX) * 100
             );
 
-            // Passphrase slider ticks: 8, 16, 32
+            // Passphrase slider ticks (linear)
             createTicks(
                 document.getElementById('ticks-words'),
-                5, 32,
-                [5, 8, 16, 24, 32]
+                [5, 8, 16, 24, 32],
+                (val) => ((val - 5) / (32 - 5)) * 100
             );
 
             // Sync Sliders
-            inpLength.addEventListener('input', (e) => valLength.textContent = e.target.value);
+            inpLength.addEventListener('input', (e) => {
+                const realLength = sliderToLength(parseInt(e.target.value));
+                valLength.textContent = realLength;
+            });
             inpWords.addEventListener('input', (e) => valWords.textContent = e.target.value);
+
+            // --- Entropy Info Toggle ---
+            document.getElementById('btn-entropy-info').addEventListener('click', () => {
+                const info = document.getElementById('entropy-info');
+                info.classList.toggle('hidden');
+            });
 
             // Tab Management
             const switchTab = (mode) => {
@@ -412,8 +502,9 @@
                 let url = '';
                 
                 if (activeMode === 'password') {
+                    const realLength = sliderToLength(parseInt(inpLength.value));
                     const params = new URLSearchParams({
-                        length: inpLength.value,
+                        length: realLength,
                         use_upper: chkUpper.checked,
                         use_lower: chkLower.checked,
                         use_digits: chkDigits.checked,
@@ -435,7 +526,8 @@
                     if (!response.ok) throw new Error('API request failed');
                     
                     const data = await response.json();
-                    elOutput.textContent = activeMode === 'password' ? data.password : data.passphrase;
+                    const result = activeMode === 'password' ? data.password : data.passphrase;
+                    elOutput.textContent = result;
                 } catch (error) {
                     console.warn("Backend unavailable. Fallback generator active for demonstration.");
                     // Fallback local generation if FastAPI backend is not running
@@ -448,8 +540,9 @@
                         if (chkEmojis.checked) chars += '🚀👽🔥🤖🌟💎🛡️🔐';
                         if (!chars) chars = 'abcdefghijklmnopqrstuvwxyz'; // failsafe
                         
+                        const realLen = sliderToLength(parseInt(inpLength.value));
                         let result = '';
-                        const array = new Uint32Array(inpLength.value);
+                        const array = new Uint32Array(realLen);
                         crypto.getRandomValues(array);
                         for (let i = 0; i < array.length; i++) {
                             const charArray = Array.from(chars); 
@@ -472,6 +565,7 @@
                 } finally {
                     hideSkeleton();
                     startCooldown();
+                    refreshEntropyMeter();
                 }
             };
 
@@ -498,9 +592,233 @@
                 }
             });
 
+            // --- Entropy Meter ---
+            function updateEntropyMeter(mode, length, options) {
+                let bits = 0;
+                if (mode === 'password') {
+                    let poolSize = 0;
+                    if (options.upper) poolSize += 26;
+                    if (options.lower) poolSize += 26;
+                    if (options.digits) poolSize += 10;
+                    if (options.specials) poolSize += 32;
+                    if (options.emojis) poolSize += 3000;
+                    bits = poolSize > 0 ? Math.round(length * Math.log2(poolSize)) : 0;
+                } else {
+                    bits = Math.round(length * Math.log2(7776));
+                }
+
+                const bar = document.getElementById('entropy-bar');
+                const text = document.getElementById('entropy-text');
+                document.getElementById('entropy-container').classList.remove('opacity-0');
+
+                // Map bits to bar width (cap at ~256 bits for 100%)
+                const pct = Math.min(100, Math.round((bits / 256) * 100));
+
+                if (bits < 50) {
+                    bar.style.width = `${Math.max(pct, 8)}%`;
+                    bar.className = 'h-full rounded-full transition-all duration-500 ease-out bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.4)]';
+                    text.textContent = `${bits} bits — Weak`;
+                    text.className = 'text-xs font-mono text-red-400';
+                } else if (bits < 80) {
+                    bar.style.width = `${pct}%`;
+                    bar.className = 'h-full rounded-full transition-all duration-500 ease-out bg-yellow-500 shadow-[0_0_8px_rgba(234,179,8,0.4)]';
+                    text.textContent = `${bits} bits — Fair`;
+                    text.className = 'text-xs font-mono text-yellow-400';
+                } else if (bits < 128) {
+                    bar.style.width = `${pct}%`;
+                    bar.className = 'h-full rounded-full transition-all duration-500 ease-out bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]';
+                    text.textContent = `${bits} bits — Strong`;
+                    text.className = 'text-xs font-mono text-emerald-400';
+                } else {
+                    bar.style.width = `${pct}%`;
+                    bar.className = 'h-full rounded-full transition-all duration-500 ease-out bg-cyan-400 shadow-[0_0_12px_rgba(34,211,238,0.5)]';
+                    text.textContent = `${bits} bits — Military 🔒`;
+                    text.className = 'text-xs font-mono text-cyan-400';
+                }
+            }
+
+            function refreshEntropyMeter() {
+                if (activeMode === 'password') {
+                    const realLength = sliderToLength(parseInt(inpLength.value));
+                    updateEntropyMeter('password', realLength, {
+                        upper: chkUpper.checked,
+                        lower: chkLower.checked,
+                        digits: chkDigits.checked,
+                        specials: chkSpecials.checked,
+                        emojis: chkEmojis.checked
+                    });
+                } else {
+                    updateEntropyMeter('passphrase', parseInt(inpWords.value), {});
+                }
+            }
+
+            // Wire entropy meter to all inputs
+            inpLength.addEventListener('input', refreshEntropyMeter);
+            inpWords.addEventListener('input', refreshEntropyMeter);
+            [chkUpper, chkLower, chkDigits, chkSpecials, chkEmojis].forEach(chk => {
+                chk.addEventListener('change', refreshEntropyMeter);
+            });
+            document.querySelectorAll('input[name="language"]').forEach(radio => {
+                radio.addEventListener('change', refreshEntropyMeter);
+            });
+
+            // Also refresh when switching tabs
+            const origSwitchTab = switchTab;
+            const switchTabWithEntropy = (mode) => { origSwitchTab(mode); refreshEntropyMeter(); };
+            tabPass.onclick = () => switchTabWithEntropy('password');
+            tabPhrase.onclick = () => switchTabWithEntropy('passphrase');
+
             // Initial Generation
             generateEntropy();
         });
+    </script>
+
+    <!-- Interactive Entropy Particle Background -->
+    <script>
+    (() => {
+        const canvas = document.getElementById('entropy-canvas');
+        const ctx = canvas.getContext('2d');
+
+        let W, H;
+        let mouse = { x: -9999, y: -9999 };
+        const PARTICLE_COUNT = 80;
+        const CONNECTION_DIST = 140;
+        const MOUSE_RADIUS = 180;
+        const MOUSE_FORCE = 0.08;
+        const CHARS = '0123456789abcdef'.split('');
+
+        function resize() {
+            W = canvas.width = window.innerWidth;
+            H = canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        // Track mouse
+        document.addEventListener('mousemove', (e) => {
+            mouse.x = e.clientX;
+            mouse.y = e.clientY;
+        });
+        document.addEventListener('mouseleave', () => {
+            mouse.x = -9999;
+            mouse.y = -9999;
+        });
+
+        // Particle class
+        class Particle {
+            constructor() {
+                this.reset();
+            }
+            reset() {
+                this.x = Math.random() * W;
+                this.y = Math.random() * H;
+                this.vx = (Math.random() - 0.5) * 0.4;
+                this.vy = (Math.random() - 0.5) * 0.4;
+                this.radius = Math.random() * 1.5 + 0.5;
+                this.baseAlpha = Math.random() * 0.3 + 0.15;
+                this.alpha = this.baseAlpha;
+                this.char = CHARS[Math.floor(Math.random() * CHARS.length)];
+                this.charTimer = Math.random() * 200;
+                this.showChar = Math.random() > 0.6; // ~40% show a hex char instead of a dot
+            }
+            update() {
+                // Mouse repulsion
+                const dx = this.x - mouse.x;
+                const dy = this.y - mouse.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                if (dist < MOUSE_RADIUS && dist > 0) {
+                    const force = (MOUSE_RADIUS - dist) / MOUSE_RADIUS * MOUSE_FORCE;
+                    this.vx += (dx / dist) * force;
+                    this.vy += (dy / dist) * force;
+                    // Glow near mouse
+                    this.alpha = Math.min(this.baseAlpha + 0.4 * (1 - dist / MOUSE_RADIUS), 0.8);
+                } else {
+                    this.alpha += (this.baseAlpha - this.alpha) * 0.05;
+                }
+
+                // Friction
+                this.vx *= 0.99;
+                this.vy *= 0.99;
+
+                this.x += this.vx;
+                this.y += this.vy;
+
+                // Wrap edges
+                if (this.x < -20) this.x = W + 20;
+                if (this.x > W + 20) this.x = -20;
+                if (this.y < -20) this.y = H + 20;
+                if (this.y > H + 20) this.y = -20;
+
+                // Randomly change displayed char (entropy effect)
+                this.charTimer--;
+                if (this.charTimer <= 0) {
+                    this.char = CHARS[Math.floor(Math.random() * CHARS.length)];
+                    this.charTimer = Math.random() * 120 + 40;
+                }
+            }
+            draw() {
+                if (this.showChar) {
+                    ctx.font = `${9 + this.radius * 2}px 'JetBrains Mono', monospace`;
+                    ctx.fillStyle = `rgba(255, 255, 255, ${this.alpha * 0.7})`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(this.char, this.x, this.y);
+                } else {
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(255, 255, 255, ${this.alpha})`;
+                    ctx.fill();
+                }
+            }
+        }
+
+        const particles = Array.from({ length: PARTICLE_COUNT }, () => new Particle());
+
+        function drawConnections() {
+            for (let i = 0; i < particles.length; i++) {
+                for (let j = i + 1; j < particles.length; j++) {
+                    const dx = particles[i].x - particles[j].x;
+                    const dy = particles[i].y - particles[j].y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+
+                    if (dist < CONNECTION_DIST) {
+                        const alpha = (1 - dist / CONNECTION_DIST) * 0.12;
+                        ctx.beginPath();
+                        ctx.moveTo(particles[i].x, particles[i].y);
+                        ctx.lineTo(particles[j].x, particles[j].y);
+                        ctx.strokeStyle = `rgba(255, 255, 255, ${alpha})`;
+                        ctx.lineWidth = 0.5;
+                        ctx.stroke();
+                    }
+                }
+            }
+        }
+
+        function animate() {
+            ctx.clearRect(0, 0, W, H);
+
+            // Draw mouse glow
+            if (mouse.x > 0 && mouse.y > 0) {
+                const gradient = ctx.createRadialGradient(mouse.x, mouse.y, 0, mouse.x, mouse.y, MOUSE_RADIUS);
+                gradient.addColorStop(0, 'rgba(255, 255, 255, 0.03)');
+                gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+                ctx.fillStyle = gradient;
+                ctx.fillRect(mouse.x - MOUSE_RADIUS, mouse.y - MOUSE_RADIUS, MOUSE_RADIUS * 2, MOUSE_RADIUS * 2);
+            }
+
+            drawConnections();
+
+            for (const p of particles) {
+                p.update();
+                p.draw();
+            }
+
+            requestAnimationFrame(animate);
+        }
+
+        animate();
+    })();
     </script>
 
 </body></html>
