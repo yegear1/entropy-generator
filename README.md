@@ -156,7 +156,7 @@ source .venv/bin/activate
 ### 2. Instalar dependências
 
 ```bash
-c
+pip install -r backend/requirements.txt
 ```
 
 ### 3. Iniciar o servidor
