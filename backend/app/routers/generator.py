@@ -35,7 +35,7 @@ async def get_generated_password(
 
 @router.get("/passphrase")
 async def get_generated_passphrase(
-    words: int = Query(6, gt=4, le=12, description="Quantidade de palavras (5-12)"),
+    words: int = Query(6, gt=4, le=32, description="Quantidade de palavras (5-32)"),
     language: str = Query("pt", pattern="^(en|pt)$")
 ):
     """
